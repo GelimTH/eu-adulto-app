@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(flutter *)",
+      "PowerShell($env:PATH -split \";\" | Where-Object { $_ -match \"flutter|dart\" })",
+      "Bash(flutter devices *)",
+      "Bash(flutter create *)",
+      "Bash(flutter pub *)",
+      "Bash(flutter analyze *)",
+      "Bash(flutter build *)",
+      "Bash(flutter run *)"
+    ]
+  }
+}
