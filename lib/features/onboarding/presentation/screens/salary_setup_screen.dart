@@ -49,70 +49,72 @@ class _SalarySetupScreenState extends ConsumerState<SalarySetupScreen> {
         ),
       ),
       body: SafeArea(
-        child: Form(
-          key: _formKey,
-          child: Column(
-            children: [
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(
-                        width: 56,
-                        height: 56,
-                        decoration: BoxDecoration(
-                          color: AppColors.primary.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              children: [
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 24),
+                        Container(
+                          width: 56,
+                          height: 56,
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: const Icon(
+                            Icons.attach_money,
+                            color: AppColors.primary,
+                            size: 28,
+                          ),
                         ),
-                        child: const Icon(
-                          Icons.attach_money,
-                          color: AppColors.primary,
-                          size: 28,
+                        const SizedBox(height: 24),
+                        Text(AppStrings.salaryQuestion,
+                            style: AppTextStyles.heading2),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Usamos isso para calcular seu orçamento.',
+                          style: AppTextStyles.bodyMuted,
                         ),
-                      ),
-                      const SizedBox(height: 24),
-                      Text(AppStrings.salaryQuestion,
-                          style: AppTextStyles.heading2),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Usamos isso para calcular seu orçamento.',
-                        style: AppTextStyles.bodyMuted,
-                      ),
-                      const SizedBox(height: 32),
-                      TextFormField(
-                        controller: _controller,
-                        keyboardType: const TextInputType.numberWithOptions(
-                            decimal: true),
-                        inputFormatters: [
-                          FilteringTextInputFormatter.allow(
-                              RegExp(r'[\d,\.]')),
-                        ],
-                        decoration: const InputDecoration(
-                          labelText: 'Renda mensal',
-                          prefixText: 'R\$ ',
-                          hintText: '0,00',
+                        const SizedBox(height: 32),
+                        TextFormField(
+                          controller: _controller,
+                          keyboardType:
+                              const TextInputType.numberWithOptions(
+                                  decimal: true),
+                          inputFormatters: [
+                            FilteringTextInputFormatter.allow(
+                                RegExp(r'[\d,\.]')),
+                          ],
+                          decoration: const InputDecoration(
+                            labelText: 'Renda mensal',
+                            prefixText: 'R\$ ',
+                            hintText: '0,00',
+                          ),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return AppStrings.campoObrigatorio;
+                            }
+                            return null;
+                          },
                         ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return AppStrings.campoObrigatorio;
-                          }
-                          return null;
-                        },
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-                child: AppButton(
+                const SizedBox(height: 16),
+                AppButton(
                   label: AppStrings.continuar,
                   onPressed: _continue,
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

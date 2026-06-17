@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_text_styles.dart';
 import '../../../../core/extensions/currency_extension.dart';
+import '../../../../shared/providers/tutorial_providers.dart';
 import '../../../onboarding/domain/entities/user_entity.dart';
 import '../../../onboarding/presentation/providers/onboarding_provider.dart';
 
@@ -81,6 +82,59 @@ class MoreScreen extends ConsumerWidget {
                 route: '/settings',
               ),
             ],
+          ),
+          const SizedBox(height: 28),
+          GestureDetector(
+            onTap: () async {
+              final prefs = ref.read(sharedPreferencesProvider);
+              await resetAllTutorials(prefs);
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Tutorial será exibido ao voltar para o Início'),
+                    backgroundColor: AppColors.primary,
+                  ),
+                );
+              }
+            },
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppColors.cardDark,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppColors.border),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.school_outlined,
+                        color: AppColors.primary, size: 22),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Rever tutorial',
+                            style: AppTextStyles.body
+                                .copyWith(fontWeight: FontWeight.w600)),
+                        const SizedBox(height: 2),
+                        Text('Exibir o guia interativo novamente',
+                            style: AppTextStyles.caption),
+                      ],
+                    ),
+                  ),
+                  const Icon(Icons.chevron_right,
+                      color: AppColors.textMuted, size: 20),
+                ],
+              ),
+            ),
           ),
         ],
       ),

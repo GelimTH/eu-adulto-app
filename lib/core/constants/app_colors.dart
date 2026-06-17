@@ -26,6 +26,7 @@ abstract class AppColors {
   static const Color scoreExcelente = Color(0xFF22C55E);
   static const Color scoreSaudavel = Color(0xFF84CC16);
   static const Color scoreAtencao = Color(0xFFFFA726);
+  static const Color scorePreocupante = Color(0xFFFF7043);
   static const Color scoreCritico = Color(0xFFEF4444);
 
   static const Color divider = Color(0xFF243346);

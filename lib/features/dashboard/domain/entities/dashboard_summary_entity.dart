@@ -1,12 +1,14 @@
 import 'package:equatable/equatable.dart';
 
-enum HealthScore { critico, atencao, saudavel, excelente }
+enum HealthScore { critico, preocupante, atencao, saudavel, excelente }
 
 extension HealthScoreExtension on HealthScore {
   String get label {
     switch (this) {
       case HealthScore.critico:
         return 'Crítico';
+      case HealthScore.preocupante:
+        return 'Preocupante';
       case HealthScore.atencao:
         return 'Atenção';
       case HealthScore.saudavel:
@@ -15,6 +17,48 @@ extension HealthScoreExtension on HealthScore {
         return 'Excelente';
     }
   }
+}
+
+class HealthScoreFator extends Equatable {
+  final String nome;
+  final String descricao;
+  final int pontos;
+  final int maximo;
+  final String dica;
+
+  const HealthScoreFator({
+    required this.nome,
+    required this.descricao,
+    required this.pontos,
+    required this.maximo,
+    required this.dica,
+  });
+
+  double get percentual => maximo > 0 ? pontos / maximo : 0;
+
+  @override
+  List<Object> get props => [nome, descricao, pontos, maximo, dica];
+}
+
+class HealthScoreBreakdown extends Equatable {
+  final List<HealthScoreFator> fatores;
+  final int pontuacaoTotal;
+
+  const HealthScoreBreakdown({
+    required this.fatores,
+    required this.pontuacaoTotal,
+  });
+
+  HealthScore get healthScore {
+    if (pontuacaoTotal >= 85) return HealthScore.excelente;
+    if (pontuacaoTotal >= 70) return HealthScore.saudavel;
+    if (pontuacaoTotal >= 50) return HealthScore.atencao;
+    if (pontuacaoTotal >= 30) return HealthScore.preocupante;
+    return HealthScore.critico;
+  }
+
+  @override
+  List<Object> get props => [fatores, pontuacaoTotal];
 }
 
 class DashboardSummaryEntity extends Equatable {
@@ -30,7 +74,7 @@ class DashboardSummaryEntity extends Equatable {
   final double percentualNecessidades;
   final double percentualObjetivos;
   final double percentualReserva;
-  final int pontuacaoSaude;
+  final HealthScoreBreakdown scoreBreakdown;
   final String nomeUsuario;
 
   const DashboardSummaryEntity({
@@ -46,9 +90,11 @@ class DashboardSummaryEntity extends Equatable {
     required this.percentualNecessidades,
     required this.percentualObjetivos,
     required this.percentualReserva,
-    required this.pontuacaoSaude,
+    required this.scoreBreakdown,
     required this.nomeUsuario,
   });
+
+  int get pontuacaoSaude => scoreBreakdown.pontuacaoTotal;
 
   double get saldoDisponivel {
     return salarioMensal -
@@ -62,12 +108,7 @@ class DashboardSummaryEntity extends Equatable {
   double get limiteObjetivos => salarioMensal * percentualObjetivos / 100;
   double get limiteReserva => salarioMensal * percentualReserva / 100;
 
-  HealthScore get healthScore {
-    if (pontuacaoSaude >= 90) return HealthScore.excelente;
-    if (pontuacaoSaude >= 70) return HealthScore.saudavel;
-    if (pontuacaoSaude >= 40) return HealthScore.atencao;
-    return HealthScore.critico;
-  }
+  HealthScore get healthScore => scoreBreakdown.healthScore;
 
   @override
   List<Object> get props => [
@@ -83,7 +124,7 @@ class DashboardSummaryEntity extends Equatable {
         percentualNecessidades,
         percentualObjetivos,
         percentualReserva,
-        pontuacaoSaude,
+        scoreBreakdown,
         nomeUsuario,
       ];
 }

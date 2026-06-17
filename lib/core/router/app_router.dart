@@ -20,22 +20,35 @@ import '../../features/reserve/presentation/screens/reserve_screen.dart';
 import '../../features/subscriptions/presentation/screens/subscriptions_screen.dart';
 import '../../features/settings/presentation/screens/more_screen.dart';
 import '../../features/settings/presentation/screens/settings_screen.dart';
+import '../../features/dashboard/presentation/screens/health_score_screen.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 final _shellNavigatorKey = GlobalKey<NavigatorState>();
 
+class _RouterNotifier extends ChangeNotifier {
+  _RouterNotifier(Ref ref) {
+    ref.listen<AsyncValue<bool>>(hasUserProvider, (_, _) {
+      notifyListeners();
+    });
+  }
+}
+
 final routerProvider = Provider<GoRouter>((ref) {
-  final hasUserAsync = ref.watch(hasUserProvider);
+  final notifier = _RouterNotifier(ref);
+  ref.onDispose(notifier.dispose);
 
   return GoRouter(
     navigatorKey: _rootNavigatorKey,
     initialLocation: '/home',
+    refreshListenable: notifier,
     redirect: (context, state) {
+      final hasUserAsync = ref.read(hasUserProvider);
+      final isOnboarding = state.matchedLocation.startsWith('/onboarding');
+
       return hasUserAsync.when(
         loading: () => null,
-        error: (_, _) => '/onboarding/name',
+        error: (_, _) => isOnboarding ? null : '/onboarding/name',
         data: (hasUser) {
-          final isOnboarding = state.matchedLocation.startsWith('/onboarding');
           if (!hasUser && !isOnboarding) return '/onboarding/name';
           if (hasUser && isOnboarding) return '/home';
           return null;
@@ -119,6 +132,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/reserve',
         builder: (_, _) => const ReserveScreen(),
+      ),
+      GoRoute(
+        path: '/health-score',
+        builder: (_, _) => const HealthScoreScreen(),
       ),
       GoRoute(
         path: '/settings',
