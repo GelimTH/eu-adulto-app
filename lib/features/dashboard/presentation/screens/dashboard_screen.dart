@@ -1,24 +1,77 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:tutorial_coach_mark/tutorial_coach_mark.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_strings.dart';
 import '../../../../core/constants/app_text_styles.dart';
 import '../../../../core/extensions/currency_extension.dart';
 import '../../../../core/extensions/date_extension.dart';
+import '../../../../shared/providers/tutorial_providers.dart';
 import '../providers/dashboard_provider.dart';
 import '../../domain/entities/dashboard_summary_entity.dart';
 import '../../../goals/presentation/providers/goals_provider.dart';
 import '../../../expenses/presentation/providers/expenses_provider.dart';
 import '../../../expenses/domain/entities/expense_entity.dart';
+import '../tutorial/dashboard_tutorial.dart';
 
-class DashboardScreen extends ConsumerWidget {
+class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends ConsumerState<DashboardScreen> {
+  bool _tutorialShowing = false;
+
+  void _maybeShowTutorial() {
+    final prefs = ref.read(sharedPreferencesProvider);
+    if (isTutorialCompleted(prefs, 'dashboard')) return;
+    if (_tutorialShowing) return;
+    _tutorialShowing = true;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final targets = buildDashboardTargets();
+      if (targets.isEmpty) return;
+
+      TutorialCoachMark(
+        targets: targets,
+        colorShadow: const Color(0xFF0F1923),
+        opacityShadow: 0.9,
+        textSkip: 'PULAR',
+        textStyleSkip: const TextStyle(
+          color: AppColors.primary,
+          fontWeight: FontWeight.w600,
+          fontSize: 16,
+        ),
+        paddingFocus: 8,
+        beforeFocus: scrollToTarget,
+        onFinish: () {
+          _tutorialShowing = false;
+          markTutorialCompleted(prefs, 'dashboard');
+        },
+        onSkip: () {
+          _tutorialShowing = false;
+          markTutorialCompleted(prefs, 'dashboard');
+          return true;
+        },
+      ).show(context: context);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final dashboardAsync = ref.watch(dashboardProvider);
     final topPadding = MediaQuery.paddingOf(context).top;
+
+    ref.listen<AsyncValue<DashboardSummaryEntity?>>(dashboardProvider,
+        (prev, next) {
+      if (next.hasValue && next.value != null) {
+        _maybeShowTutorial();
+      }
+    });
 
     return Scaffold(
       body: dashboardAsync.when(
@@ -49,9 +102,11 @@ class DashboardScreen extends ConsumerWidget {
                       const SizedBox(height: 16),
                       _buildQuickActions(context),
                       const SizedBox(height: 16),
-                      const _GoalsPreviewCard(),
+                      _GoalsPreviewCard(
+                          key: DashboardTutorialKeys.goalsPreview),
                       const SizedBox(height: 16),
-                      const _RecentExpensesCard(),
+                      _RecentExpensesCard(
+                          key: DashboardTutorialKeys.recentExpenses),
                     ]),
                   ),
                 ),
@@ -107,9 +162,11 @@ class DashboardScreen extends ConsumerWidget {
                       ],
                     ),
                     _HealthBadge(
+                      key: DashboardTutorialKeys.healthBadge,
                       score: summary.pontuacaoSaude,
                       label: summary.healthScore.label,
                       healthScore: summary.healthScore,
+                      onTap: () => context.push('/health-score'),
                     ),
                   ],
                 ),
@@ -172,6 +229,7 @@ class DashboardScreen extends ConsumerWidget {
 
   Widget _buildBudgetRule(DashboardSummaryEntity summary) {
     return Container(
+      key: DashboardTutorialKeys.budgetRule,
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: AppColors.cardDark,
@@ -236,6 +294,7 @@ class DashboardScreen extends ConsumerWidget {
 
   Widget _buildHealthAndReserveRow(DashboardSummaryEntity summary) {
     return Row(
+      key: DashboardTutorialKeys.healthAndReserve,
       children: [
         Expanded(
           child: _MetricCard(
@@ -292,6 +351,7 @@ class DashboardScreen extends ConsumerWidget {
     ];
 
     return Column(
+      key: DashboardTutorialKeys.financialShortcuts,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text('Acesso rápido', style: AppTextStyles.label),
@@ -333,6 +393,7 @@ class DashboardScreen extends ConsumerWidget {
 
   Widget _buildQuickActions(BuildContext context) {
     return Row(
+      key: DashboardTutorialKeys.quickActions,
       children: [
         Expanded(
           child: _QuickActionButton(
@@ -369,7 +430,7 @@ class DashboardScreen extends ConsumerWidget {
 // Rebuild isolado: cada um só reconstrói quando o seu próprio provider muda.
 
 class _GoalsPreviewCard extends ConsumerWidget {
-  const _GoalsPreviewCard();
+  const _GoalsPreviewCard({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -452,7 +513,7 @@ class _GoalsPreviewCard extends ConsumerWidget {
 }
 
 class _RecentExpensesCard extends ConsumerWidget {
-  const _RecentExpensesCard();
+  const _RecentExpensesCard({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -720,11 +781,15 @@ class _HealthBadge extends StatelessWidget {
   final int score;
   final String label;
   final HealthScore healthScore;
+  final VoidCallback? onTap;
 
-  const _HealthBadge(
-      {required this.score,
-      required this.label,
-      required this.healthScore});
+  const _HealthBadge({
+    super.key,
+    required this.score,
+    required this.label,
+    required this.healthScore,
+    this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -732,38 +797,42 @@ class _HealthBadge extends StatelessWidget {
       HealthScore.excelente => AppColors.scoreExcelente,
       HealthScore.saudavel => AppColors.scoreSaudavel,
       HealthScore.atencao => AppColors.scoreAtencao,
+      HealthScore.preocupante => AppColors.scorePreocupante,
       HealthScore.critico => AppColors.scoreCritico,
     };
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text('$score',
-              style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w800,
-                  color: color)),
-          const SizedBox(width: 6),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('Saúde',
-                  style: TextStyle(
-                      fontSize: 9, color: AppColors.textSecondary)),
-              Text(label,
-                  style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600,
-                      color: color)),
-            ],
-          ),
-        ],
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withValues(alpha: 0.3)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('$score',
+                style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    color: color)),
+            const SizedBox(width: 6),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Saúde',
+                    style: TextStyle(
+                        fontSize: 9, color: AppColors.textSecondary)),
+                Text(label,
+                    style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                        color: color)),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -20,6 +20,7 @@ import '../../features/reserve/presentation/screens/reserve_screen.dart';
 import '../../features/subscriptions/presentation/screens/subscriptions_screen.dart';
 import '../../features/settings/presentation/screens/more_screen.dart';
 import '../../features/settings/presentation/screens/settings_screen.dart';
+import '../../features/dashboard/presentation/screens/health_score_screen.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 final _shellNavigatorKey = GlobalKey<NavigatorState>();
@@ -131,6 +132,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/reserve',
         builder: (_, _) => const ReserveScreen(),
+      ),
+      GoRoute(
+        path: '/health-score',
+        builder: (_, _) => const HealthScoreScreen(),
       ),
       GoRoute(
         path: '/settings',
