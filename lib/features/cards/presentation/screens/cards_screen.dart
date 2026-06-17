@@ -12,6 +12,8 @@ import '../../domain/entities/card_entity.dart';
 import '../../../banks/presentation/providers/banks_provider.dart';
 import '../../../expenses/presentation/providers/expenses_provider.dart';
 import '../../../expenses/domain/entities/expense_entity.dart';
+import '../../../installments/presentation/providers/installments_provider.dart';
+import '../../../installments/domain/entities/installment_entity.dart';
 
 class CardsScreen extends ConsumerWidget {
   const CardsScreen({super.key});
@@ -20,6 +22,7 @@ class CardsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final cardsAsync = ref.watch(cardsNotifierProvider);
     final expenses = ref.watch(expensesNotifierProvider).value ?? [];
+    final installments = ref.watch(installmentsNotifierProvider).value ?? [];
 
     return Scaffold(
       appBar: AppBar(
@@ -52,17 +55,26 @@ class CardsScreen extends ConsumerWidget {
             separatorBuilder: (_, _) => const SizedBox(height: 12),
             itemBuilder: (_, i) {
               final card = cards[i];
-              final linked = expenses
+              final linkedExpenses = expenses
                   .where((e) => e.cartaoId == card.id)
                   .toList()
                 ..sort((a, b) => b.data.compareTo(a.data));
-              final linkedTotal =
-                  linked.fold(0.0, (sum, e) => sum + e.valor);
+              final linkedInstallments = installments
+                  .where((inst) =>
+                      inst.cartaoId == card.id &&
+                      inst.parcelaAtual <= inst.totalParcelas)
+                  .toList();
+              final expensesTotal =
+                  linkedExpenses.fold(0.0, (sum, e) => sum + e.valor);
+              final installmentsTotal = linkedInstallments.fold(
+                  0.0, (sum, inst) => sum + inst.valorParcela);
 
               return _CardItem(
                 card: card,
-                linked: linked,
-                linkedTotal: linkedTotal,
+                linkedExpenses: linkedExpenses,
+                linkedInstallments: linkedInstallments,
+                expensesTotal: expensesTotal,
+                installmentsTotal: installmentsTotal,
                 onEdit: () => _showCardSheet(context, ref, card),
                 onDelete: () async {
                   final confirmed = await ConfirmationDialog.show(context);
@@ -98,18 +110,24 @@ class CardsScreen extends ConsumerWidget {
 
 class _CardItem extends StatefulWidget {
   final CardEntity card;
-  final List<ExpenseEntity> linked;
-  final double linkedTotal;
+  final List<ExpenseEntity> linkedExpenses;
+  final List<InstallmentEntity> linkedInstallments;
+  final double expensesTotal;
+  final double installmentsTotal;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
 
   const _CardItem({
     required this.card,
-    required this.linked,
-    required this.linkedTotal,
+    required this.linkedExpenses,
+    required this.linkedInstallments,
+    required this.expensesTotal,
+    required this.installmentsTotal,
     required this.onEdit,
     required this.onDelete,
   });
+
+  double get totalUsed => expensesTotal + installmentsTotal;
 
   @override
   State<_CardItem> createState() => _CardItemState();
@@ -121,9 +139,14 @@ class _CardItemState extends State<_CardItem> {
   @override
   Widget build(BuildContext context) {
     final card = widget.card;
+    final totalUsed = widget.totalUsed;
     final usedPct = card.limiteTotal > 0
-        ? (widget.linkedTotal / card.limiteTotal).clamp(0.0, 1.0)
+        ? (totalUsed / card.limiteTotal).clamp(0.0, 1.0)
         : 0.0;
+    final hasLinked = widget.linkedExpenses.isNotEmpty ||
+        widget.linkedInstallments.isNotEmpty;
+    final totalLinkedCount =
+        widget.linkedExpenses.length + widget.linkedInstallments.length;
 
     return Container(
       decoration: BoxDecoration(
@@ -188,20 +211,22 @@ class _CardItemState extends State<_CardItem> {
                     ),
                   ],
                 ),
-                if (widget.linkedTotal > 0) ...[
+                if (totalUsed > 0) ...[
                   const SizedBox(height: 14),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text('Gasto neste mês', style: AppTextStyles.caption),
-                      Text(
-                        widget.linkedTotal.brl,
-                        style: AppTextStyles.moneySmall
-                            .copyWith(color: AppColors.error),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
+                  if (widget.expensesTotal > 0)
+                    _buildTotalRow('Gastos', widget.expensesTotal),
+                  if (widget.installmentsTotal > 0) ...[
+                    if (widget.expensesTotal > 0) const SizedBox(height: 4),
+                    _buildTotalRow(
+                        'Parcelamentos', widget.installmentsTotal),
+                  ],
+                  if (widget.expensesTotal > 0 &&
+                      widget.installmentsTotal > 0) ...[
+                    const SizedBox(height: 4),
+                    _buildTotalRow('Total utilizado', totalUsed,
+                        isBold: true),
+                  ],
+                  const SizedBox(height: 8),
                   ClipRRect(
                     borderRadius: BorderRadius.circular(4),
                     child: LinearProgressIndicator(
@@ -222,7 +247,7 @@ class _CardItemState extends State<_CardItem> {
               ],
             ),
           ),
-          if (widget.linked.isNotEmpty) ...[
+          if (hasLinked) ...[
             const Divider(height: 1, color: AppColors.border),
             InkWell(
               onTap: () => setState(() => _expanded = !_expanded),
@@ -237,7 +262,7 @@ class _CardItemState extends State<_CardItem> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      '${widget.linked.length} gasto${widget.linked.length > 1 ? 's' : ''} vinculado${widget.linked.length > 1 ? 's' : ''}',
+                      '$totalLinkedCount item${totalLinkedCount > 1 ? 's' : ''} vinculado${totalLinkedCount > 1 ? 's' : ''}',
                       style: AppTextStyles.caption
                           .copyWith(color: AppColors.primary),
                     ),
@@ -254,30 +279,70 @@ class _CardItemState extends State<_CardItem> {
             ),
             if (_expanded) ...[
               const Divider(height: 1, color: AppColors.border),
-              ...widget.linked.take(5).map((e) => Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
-                    child: Row(
-                      children: [
-                        Text(
-                          '${e.data.day}/${e.data.month}',
-                          style: AppTextStyles.caption,
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            e.descricao ?? e.categoria.label,
+              if (widget.linkedExpenses.isNotEmpty) ...[
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
+                  child: Text('Gastos',
+                      style: AppTextStyles.caption
+                          .copyWith(color: AppColors.textMuted)),
+                ),
+                ...widget.linkedExpenses.take(5).map((e) => Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
+                      child: Row(
+                        children: [
+                          Text(
+                            '${e.data.day}/${e.data.month}',
                             style: AppTextStyles.caption,
-                            overflow: TextOverflow.ellipsis,
                           ),
-                        ),
-                        Text(
-                          e.valor.brl,
-                          style: AppTextStyles.caption
-                              .copyWith(color: AppColors.error),
-                        ),
-                      ],
-                    ),
-                  )),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              e.descricao ?? e.categoria.label,
+                              style: AppTextStyles.caption,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          Text(
+                            e.valor.brl,
+                            style: AppTextStyles.caption
+                                .copyWith(color: AppColors.error),
+                          ),
+                        ],
+                      ),
+                    )),
+              ],
+              if (widget.linkedInstallments.isNotEmpty) ...[
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
+                  child: Text('Parcelamentos',
+                      style: AppTextStyles.caption
+                          .copyWith(color: AppColors.textMuted)),
+                ),
+                ...widget.linkedInstallments.map((inst) => Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
+                      child: Row(
+                        children: [
+                          Text(
+                            '${inst.parcelaAtual}/${inst.totalParcelas}',
+                            style: AppTextStyles.caption,
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              inst.descricao,
+                              style: AppTextStyles.caption,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          Text(
+                            inst.valorParcela.brl,
+                            style: AppTextStyles.caption
+                                .copyWith(color: AppColors.warning),
+                          ),
+                        ],
+                      ),
+                    )),
+              ],
               const SizedBox(height: 12),
             ],
           ] else ...[
@@ -286,13 +351,28 @@ class _CardItemState extends State<_CardItem> {
               padding:
                   const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               child: Text(
-                'Nenhum gasto vinculado neste mês',
+                'Nenhum gasto ou parcelamento vinculado',
                 style: AppTextStyles.caption,
               ),
             ),
           ],
         ],
       ),
+    );
+  }
+
+  Widget _buildTotalRow(String label, double value, {bool isBold = false}) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(label, style: AppTextStyles.caption),
+        Text(
+          value.brl,
+          style: isBold
+              ? AppTextStyles.moneySmall.copyWith(color: AppColors.error)
+              : AppTextStyles.caption.copyWith(color: AppColors.error),
+        ),
+      ],
     );
   }
 }
