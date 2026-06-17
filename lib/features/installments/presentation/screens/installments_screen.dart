@@ -11,6 +11,7 @@ import '../../../../shared/widgets/confirmation_dialog.dart';
 import '../providers/installments_provider.dart';
 import '../../domain/entities/installment_entity.dart';
 import '../../../banks/presentation/providers/banks_provider.dart';
+import '../../../cards/presentation/providers/cards_provider.dart';
 
 class InstallmentsScreen extends ConsumerWidget {
   const InstallmentsScreen({super.key});
@@ -70,8 +71,11 @@ class InstallmentsScreen extends ConsumerWidget {
                   padding: const EdgeInsets.all(20),
                   itemCount: items.length,
                   separatorBuilder: (_, _) => const SizedBox(height: 12),
-                  itemBuilder: (_, i) =>
-                      _InstallmentCard(item: items[i], ref: ref),
+                  itemBuilder: (_, i) => _InstallmentCard(
+                    item: items[i],
+                    ref: ref,
+                    onEdit: () => _showAddSheet(context, ref, items[i]),
+                  ),
                 );
               },
             ),
@@ -102,8 +106,13 @@ class InstallmentsScreen extends ConsumerWidget {
 class _InstallmentCard extends StatelessWidget {
   final InstallmentEntity item;
   final WidgetRef ref;
+  final VoidCallback onEdit;
 
-  const _InstallmentCard({required this.item, required this.ref});
+  const _InstallmentCard({
+    required this.item,
+    required this.ref,
+    required this.onEdit,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -124,6 +133,11 @@ class _InstallmentCard extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(item.descricao, style: AppTextStyles.heading3),
+              ),
+              IconButton(
+                icon: const Icon(Icons.edit_outlined,
+                    color: AppColors.primary, size: 18),
+                onPressed: onEdit,
               ),
               IconButton(
                 icon: const Icon(Icons.delete_outline,
@@ -191,6 +205,7 @@ class _InstallmentFormSheetState extends State<_InstallmentFormSheet> {
   final _parcelasController = TextEditingController();
   final _parcelaAtualController = TextEditingController();
   int? _selectedBankId;
+  int? _selectedCardId;
   bool _isLoading = false;
 
   @override
@@ -204,6 +219,7 @@ class _InstallmentFormSheetState extends State<_InstallmentFormSheet> {
       _parcelasController.text = item.totalParcelas.toString();
       _parcelaAtualController.text = item.parcelaAtual.toString();
       _selectedBankId = item.bancoId;
+      _selectedCardId = item.cartaoId;
     }
   }
 
@@ -234,6 +250,7 @@ class _InstallmentFormSheetState extends State<_InstallmentFormSheet> {
       parcelaAtual: parcelaAtual,
       totalParcelas: totalParcelas,
       bancoId: _selectedBankId,
+      cartaoId: _selectedCardId,
       dataInicio: widget.item?.dataInicio ?? DateTime.now(),
     );
 
@@ -250,9 +267,36 @@ class _InstallmentFormSheetState extends State<_InstallmentFormSheet> {
     if (mounted) Navigator.of(context).pop();
   }
 
+  Widget _buildCardDropdown() {
+    final cardsAsync = widget.ref.watch(cardsNotifierProvider);
+    return cardsAsync.when(
+      loading: () => const SizedBox(),
+      error: (_, _) => const SizedBox(),
+      data: (cards) {
+        if (cards.isEmpty) return const SizedBox();
+        return DropdownButtonFormField<int?>(
+          initialValue: _selectedCardId,
+          decoration:
+              const InputDecoration(labelText: AppStrings.cartao),
+          dropdownColor: AppColors.cardDark,
+          items: [
+            const DropdownMenuItem<int?>(
+                value: null, child: Text('Nenhum')),
+            ...cards.map((c) => DropdownMenuItem<int?>(
+                  value: c.id,
+                  child: Text(c.nome),
+                )),
+          ],
+          onChanged: (v) => setState(() => _selectedCardId = v),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final banksAsync = widget.ref.watch(banksNotifierProvider);
+    final isEditing = widget.item != null;
     return SingleChildScrollView(
       padding: EdgeInsets.fromLTRB(
           24, 24, 24, MediaQuery.of(context).viewInsets.bottom + 24),
@@ -260,7 +304,10 @@ class _InstallmentFormSheetState extends State<_InstallmentFormSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(AppStrings.novoParcelamento, style: AppTextStyles.heading3),
+          Text(
+            isEditing ? 'Editar Parcelamento' : AppStrings.novoParcelamento,
+            style: AppTextStyles.heading3,
+          ),
           const SizedBox(height: 20),
           TextField(
             controller: _descController,
@@ -325,6 +372,8 @@ class _InstallmentFormSheetState extends State<_InstallmentFormSheet> {
               );
             },
           ),
+          const SizedBox(height: 12),
+          _buildCardDropdown(),
           const SizedBox(height: 24),
           ElevatedButton(
             onPressed: _isLoading ? null : _save,

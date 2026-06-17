@@ -35,53 +35,61 @@ class _NameSetupScreenState extends ConsumerState<NameSetupScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 48),
-                Container(
-                  width: 56,
-                  height: 56,
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(16),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(24, 48, 24, 24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: 56,
+                        height: 56,
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: const Icon(
+                          Icons.person_outline,
+                          color: AppColors.primary,
+                          size: 28,
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      Text(AppStrings.nameQuestion,
+                          style: AppTextStyles.heading2),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Vamos personalizar sua experiência.',
+                        style: AppTextStyles.bodyMuted,
+                      ),
+                      const SizedBox(height: 32),
+                      AppTextField(
+                        label: AppStrings.nameHint,
+                        controller: _controller,
+                        keyboardType: TextInputType.name,
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return AppStrings.campoObrigatorio;
+                          }
+                          return null;
+                        },
+                      ),
+                    ],
                   ),
-                  child: const Icon(
-                    Icons.person_outline,
-                    color: AppColors.primary,
-                    size: 28,
-                  ),
                 ),
-                const SizedBox(height: 24),
-                Text(AppStrings.nameQuestion, style: AppTextStyles.heading2),
-                const SizedBox(height: 8),
-                Text(
-                  'Vamos personalizar sua experiência.',
-                  style: AppTextStyles.bodyMuted,
-                ),
-                const SizedBox(height: 32),
-                AppTextField(
-                  label: AppStrings.nameHint,
-                  controller: _controller,
-                  keyboardType: TextInputType.name,
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return AppStrings.campoObrigatorio;
-                    }
-                    return null;
-                  },
-                ),
-                const Spacer(),
-                AppButton(
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                child: AppButton(
                   label: AppStrings.continuar,
                   onPressed: _continue,
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
