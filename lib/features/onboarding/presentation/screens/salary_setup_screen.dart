@@ -54,50 +54,61 @@ class _SalarySetupScreenState extends ConsumerState<SalarySetupScreen> {
           child: Form(
             key: _formKey,
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SizedBox(height: 24),
-                Container(
-                  width: 56,
-                  height: 56,
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: const Icon(
-                    Icons.attach_money,
-                    color: AppColors.primary,
-                    size: 28,
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 24),
+                        Container(
+                          width: 56,
+                          height: 56,
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: const Icon(
+                            Icons.attach_money,
+                            color: AppColors.primary,
+                            size: 28,
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        Text(AppStrings.salaryQuestion,
+                            style: AppTextStyles.heading2),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Usamos isso para calcular seu orçamento.',
+                          style: AppTextStyles.bodyMuted,
+                        ),
+                        const SizedBox(height: 32),
+                        TextFormField(
+                          controller: _controller,
+                          keyboardType:
+                              const TextInputType.numberWithOptions(
+                                  decimal: true),
+                          inputFormatters: [
+                            FilteringTextInputFormatter.allow(
+                                RegExp(r'[\d,\.]')),
+                          ],
+                          decoration: const InputDecoration(
+                            labelText: 'Renda mensal',
+                            prefixText: 'R\$ ',
+                            hintText: '0,00',
+                          ),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return AppStrings.campoObrigatorio;
+                            }
+                            return null;
+                          },
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-                const SizedBox(height: 24),
-                Text(AppStrings.salaryQuestion, style: AppTextStyles.heading2),
-                const SizedBox(height: 8),
-                Text(
-                  'Usamos isso para calcular seu orçamento.',
-                  style: AppTextStyles.bodyMuted,
-                ),
-                const SizedBox(height: 32),
-                TextFormField(
-                  controller: _controller,
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
-                  inputFormatters: [
-                    FilteringTextInputFormatter.allow(RegExp(r'[\d,\.]')),
-                  ],
-                  decoration: const InputDecoration(
-                    labelText: 'Renda mensal',
-                    prefixText: 'R\$ ',
-                    hintText: '0,00',
-                  ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return AppStrings.campoObrigatorio;
-                    }
-                    return null;
-                  },
-                ),
-                const Spacer(),
+                const SizedBox(height: 16),
                 AppButton(
                   label: AppStrings.continuar,
                   onPressed: _continue,

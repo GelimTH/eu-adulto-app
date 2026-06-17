@@ -43,7 +43,9 @@ class DatabaseHelper {
   Future<void> _onCreate(Database db, int version) async {
     await MigrationV1.create(db);
     await MigrationV2.run(db);
-    await MigrationV3.run(db);
+    // MigrationV3 (ALTER TABLE debts ADD COLUMN tipo) não roda aqui
+    // porque o createSql da tabela debts já inclui a coluna tipo.
+    // Apenas _onUpgrade aplica este ALTER para quem vem da V2.
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {

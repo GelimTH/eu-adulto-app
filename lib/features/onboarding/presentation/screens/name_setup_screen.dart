@@ -40,42 +40,51 @@ class _NameSetupScreenState extends ConsumerState<NameSetupScreen> {
           child: Form(
             key: _formKey,
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SizedBox(height: 48),
-                Container(
-                  width: 56,
-                  height: 56,
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(16),
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 48),
+                        Container(
+                          width: 56,
+                          height: 56,
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: const Icon(
+                            Icons.person_outline,
+                            color: AppColors.primary,
+                            size: 28,
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        Text(AppStrings.nameQuestion,
+                            style: AppTextStyles.heading2),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Vamos personalizar sua experiência.',
+                          style: AppTextStyles.bodyMuted,
+                        ),
+                        const SizedBox(height: 32),
+                        AppTextField(
+                          label: AppStrings.nameHint,
+                          controller: _controller,
+                          keyboardType: TextInputType.name,
+                          validator: (value) {
+                            if (value == null || value.trim().isEmpty) {
+                              return AppStrings.campoObrigatorio;
+                            }
+                            return null;
+                          },
+                        ),
+                      ],
+                    ),
                   ),
-                  child: const Icon(
-                    Icons.person_outline,
-                    color: AppColors.primary,
-                    size: 28,
-                  ),
                 ),
-                const SizedBox(height: 24),
-                Text(AppStrings.nameQuestion, style: AppTextStyles.heading2),
-                const SizedBox(height: 8),
-                Text(
-                  'Vamos personalizar sua experiência.',
-                  style: AppTextStyles.bodyMuted,
-                ),
-                const SizedBox(height: 32),
-                AppTextField(
-                  label: AppStrings.nameHint,
-                  controller: _controller,
-                  keyboardType: TextInputType.name,
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return AppStrings.campoObrigatorio;
-                    }
-                    return null;
-                  },
-                ),
-                const Spacer(),
+                const SizedBox(height: 16),
                 AppButton(
                   label: AppStrings.continuar,
                   onPressed: _continue,
